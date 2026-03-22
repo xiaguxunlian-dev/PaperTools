@@ -78,12 +78,13 @@ COLORS = {
 }
 
 # ── 字体配置 ──────────────────────────────────────────────────────
+# 大字体模式：对笔记本和老年人更友好
 FONTS = {
-    'title': ('Segoe UI', 20, 'bold'),
-    'subtitle': ('Segoe UI', 12),
-    'body': ('Segoe UI', 10),
-    'mono': ('Consolas', 9),
-    'small': ('Segoe UI', 9),
+    'title': ('Segoe UI', 24, 'bold'),      # 原 20 → 24
+    'subtitle': ('Segoe UI', 14),           # 原 12 → 14
+    'body': ('Segoe UI', 12),               # 原 10 → 12
+    'mono': ('Consolas', 11),               # 原 9 → 11
+    'small': ('Segoe UI', 11),              # 原 9 → 11
 }
 
 # ── 功能定义 ──────────────────────────────────────────────────────
@@ -201,8 +202,8 @@ class PaperToolsApp:
     def __init__(self, root):
         self.root = root
         self.root.title('PaperTools — 科研助手')
-        self.root.geometry('1400x900')
-        self.root.minsize(1200, 700)
+        self.root.geometry('1600x1000')
+        self.root.minsize(1400, 800)
         self.root.configure(bg=COLORS['bg'])
         
         # 状态管理
@@ -322,7 +323,7 @@ class PaperToolsApp:
         
     def _build_result_panel(self):
         """右侧结果面板 - 显示检索结果表格"""
-        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=450)
+        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=520)
         self.result_frame.grid(row=0, column=2, sticky='nsew', padx=(0, 0))
         self.result_frame.grid_propagate(False)
         
@@ -369,7 +370,7 @@ class PaperToolsApp:
         
         # 表头
         headers = ['☑', '标题', '年份', '来源']
-        col_widths = [3, 35, 8, 10]
+        col_widths = [4, 28, 8, 10]
         
         header_frame = tk.Frame(table_frame, bg=COLORS['bg_card'])
         header_frame.pack(fill='x')
@@ -396,7 +397,7 @@ class PaperToolsApp:
         self.result_canvas.pack(side='left', fill='both', expand=True)
         
         self.result_canvas_window = self.result_canvas.create_window(
-            (0, 0), window=self.result_table_inner, anchor='nw', width=420)
+            (0, 0), window=self.result_table_inner, anchor='nw', width=480)
             
         self.result_table_inner.bind('<Configure>', 
             lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox('all')))
