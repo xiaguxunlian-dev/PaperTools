@@ -1,0 +1,8 @@
+# PyInstaller 临时构建目录
+build_tmp/
+__pycache__/
+*.pyc
+*.pyo
+
+# 保留 dist/ 目录下的 exe（供用户直接下载）
+# dist/ 不忽略
