@@ -63,6 +63,14 @@ def cmd_search(args):
         print(f"    Keywords: {', '.join(paper.get('keywords', []))}")
         print()
     
+    # 保存结果到文件（支持下游功能复用）
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(results, ensure_ascii=False, indent=2),
+            encoding='utf-8'
+        )
+        print(f"✅ 结果已保存到: {args.output}")
+    
     if args.json:
         print(json.dumps(results, ensure_ascii=False, indent=2))
 
@@ -110,16 +118,28 @@ def cmd_pico(args):
 
 
 def cmd_table(args):
-    query = args.query
     format_ = args.format or 'markdown'
-    limit = args.limit or 20
     
-    searcher = FederatedSearcher(api_keys=Config().get_api_keys())
-    results = searcher.search(query, databases=['pubmed', 'arxiv', 'semantic'], limit=limit)
+    # 支持从文件加载已有结果，避免重复检索
+    if args.from_file:
+        data = json.loads(Path(args.from_file).read_text(encoding='utf-8'))
+        papers = data.get('papers', [])
+        print(f"📂 从 {args.from_file} 加载了 {len(papers)} 篇文献")
+    else:
+        query = args.query
+        limit = args.limit or 20
+        searcher = FederatedSearcher(api_keys=Config().get_api_keys())
+        results = searcher.search(query, databases=['pubmed', 'arxiv', 'semantic'], limit=limit)
+        papers = results['papers']
     
     generator = EvidenceTableGenerator()
-    table = generator.generate(results['papers'], format_=format_)
+    table = generator.generate(papers, format_=format_)
     print(table)
+    
+    # 支持保存表格到文件
+    if args.output:
+        Path(args.output).write_text(table, encoding='utf-8')
+        print(f"✅ 表格已保存到: {args.output}")
 
 
 def cmd_prisma(args):
@@ -134,17 +154,25 @@ def cmd_prisma(args):
 
 
 def cmd_review(args):
-    searcher = FederatedSearcher(api_keys=Config().get_api_keys())
-    topic = args.topic or args.query
-    results = searcher.search(topic, databases=['pubmed', 'arxiv', 'semantic'], limit=50)
+    # 支持从文件加载已有结果
+    if args.from_file:
+        data = json.loads(Path(args.from_file).read_text(encoding='utf-8'))
+        papers = data.get('papers', [])
+        topic = data.get('query', args.topic)
+        print(f"📂 从 {args.from_file} 加载了 {len(papers)} 篇文献")
+    else:
+        searcher = FederatedSearcher(api_keys=Config().get_api_keys())
+        topic = args.topic or args.query
+        results = searcher.search(topic, databases=['pubmed', 'arxiv', 'semantic'], limit=50)
+        papers = results['papers']
     
     writer = IMRADWriter()
     extractor = PICOExtractor()
-    pico = extractor.extract(args.topic)
+    pico = extractor.extract(topic)
     
     review = writer.generate(
-        topic=args.topic,
-        papers=results['papers'],
+        topic=topic,
+        papers=papers,
         pico=pico,
         sections=args.sections.split(',') if args.sections else ['background', 'methods'],
     )
@@ -152,7 +180,7 @@ def cmd_review(args):
     
     if args.output:
         Path(args.output).write_text(review, encoding='utf-8')
-        print(f"\n✅ 已保存到 {args.output}")
+        print(f"\n✅ 综述已保存到 {args.output}")
 
 
 def cmd_refs(args):
@@ -395,6 +423,7 @@ def main():
     p_search.add_argument('--database', '--db', dest='database', help='数据库列表，逗号分隔')
     p_search.add_argument('--limit', '--max', dest='limit', type=int, default=3, help='每库返回数量')
     p_search.add_argument('--json', action='store_true', help='JSON 输出')
+    p_search.add_argument('--output', '-o', help='保存结果到 JSON 文件（供下游功能使用）')
     p_search.set_defaults(func=cmd_search)
     
     # Assess
@@ -413,9 +442,11 @@ def main():
     
     # Table
     p_table = sub.add_parser('table', help='生成证据表格')
-    p_table.add_argument('--query', required=True, help='检索词')
+    p_table.add_argument('--query', help='检索词（与 --from 二选一）')
+    p_table.add_argument('--from', dest='from_file', help='从检索结果 JSON 文件加载（避免重复检索）')
     p_table.add_argument('--format', choices=['markdown', 'csv', 'json'], default='markdown')
     p_table.add_argument('--limit', type=int)
+    p_table.add_argument('--output', '-o', help='保存表格到文件')
     p_table.set_defaults(func=cmd_table)
     
     # PRISMA
@@ -425,7 +456,8 @@ def main():
     
     # Review
     p_review = sub.add_parser('review', help='生成综述草稿')
-    p_review.add_argument('--topic', required=True, help='综述主题')
+    p_review.add_argument('--topic', help='综述主题（与 --from 二选一）')
+    p_review.add_argument('--from', dest='from_file', help='从检索结果 JSON 文件加载')
     p_review.add_argument('--sections', help='章节列表，逗号分隔')
     p_review.add_argument('--output', '-o', help='输出文件路径')
     p_review.set_defaults(func=cmd_review)
