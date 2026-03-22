@@ -1,0 +1,2 @@
+# Research Suite dependencies
+feedparser>=5.2.1
