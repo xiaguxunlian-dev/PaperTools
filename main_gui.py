@@ -484,13 +484,27 @@ class PaperToolsApp:
     def _search_thread(self, query):
         try:
             script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            cmd = [
-                sys.executable, script,
-                'search', query,
-                '--database', self.db_var.get(),
-                '--limit', str(self.limit_var.get()),
-                '--output', os.path.join(_BASE, 'temp_results.json')
-            ]
+            output_file = os.path.join(_BASE, 'temp_results.json')
+            
+            # 检测是否在 PyInstaller 打包环境中运行
+            if getattr(sys, 'frozen', False):
+                # 打包环境：使用 python 命令直接运行脚本
+                cmd = [
+                    'python', script,
+                    'search', query,
+                    '--database', self.db_var.get(),
+                    '--limit', str(self.limit_var.get()),
+                    '--output', output_file
+                ]
+            else:
+                # 开发环境：使用当前 Python 解释器
+                cmd = [
+                    sys.executable, script,
+                    'search', query,
+                    '--database', self.db_var.get(),
+                    '--limit', str(self.limit_var.get()),
+                    '--output', output_file
+                ]
             
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -609,7 +623,12 @@ class PaperToolsApp:
         """执行下游功能"""
         try:
             script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            cmd = [sys.executable, script] + args
+            
+            # 检测是否在 PyInstaller 打包环境中运行
+            if getattr(sys, 'frozen', False):
+                cmd = ['python', script] + args
+            else:
+                cmd = [sys.executable, script] + args
             
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
