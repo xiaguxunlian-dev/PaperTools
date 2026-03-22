@@ -9,10 +9,15 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 
 import argparse
 import json
+import dataclasses
 from pathlib import Path
 
-# Add scripts to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root and scripts dir to path so modules can be found
+# regardless of which directory the script is invoked from
+_SCRIPT_DIR = Path(__file__).resolve().parent          # .../scripts/
+_PROJECT_ROOT = _SCRIPT_DIR.parent                     # .../PaperTools/
+sys.path.insert(0, str(_SCRIPT_DIR))
+sys.path.insert(0, str(_PROJECT_ROOT))
 
 from config import Config
 from search.federated import FederatedSearcher
@@ -91,13 +96,17 @@ def cmd_assess(args):
         return
     
     for r in results:
+        # Dataclass objects are not JSON-serializable by default; convert first
+        if dataclasses.is_dataclass(r) and not isinstance(r, type):
+            r = dataclasses.asdict(r)
         print(json.dumps(r, ensure_ascii=False, indent=2))
 
 
 def cmd_pico(args):
     extractor = PICOExtractor()
     result = extractor.extract(args.text or args.query or "")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # PICO is a dataclass — convert to dict before JSON serialization
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
 
 def cmd_table(args):
